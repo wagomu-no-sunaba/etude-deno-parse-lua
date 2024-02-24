@@ -1,4 +1,4 @@
-import { assertEquals } from "https://deno.land/std@0.217.0/testing/asserts.ts";
+import { assertEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
 import { parseLua } from "./parseLua.ts";
 
 Deno.test("空のとき", () => {
