@@ -17,15 +17,20 @@ Deno.test("関係ないコメントかコメント行のとき", () => {
   assertEquals(plugins, []);
 });
 
-Deno.test("単一のレポジトリだけ設定", () => {
+Deno.test("複数のレポジトリを設定", () => {
   const hooksFile: string[] = [
     "-- {{{ repo: 'hoge' }}}",
+    "-- {{{ repo: 'fuga' }}}",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
   const expected: Plugin[] = [
     {
       name: "hoge",
       repo: "hoge",
+    },
+    {
+      name: "fuga",
+      repo: "fuga",
     },
   ];
   assertEquals(plugins, expected);
