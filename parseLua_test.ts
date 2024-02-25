@@ -35,3 +35,18 @@ Deno.test("複数のレポジトリを設定", () => {
   ];
   assertEquals(plugins, expected);
 });
+
+Deno.test("repoとnameが別", () => {
+  const hooksFile: string[] = [
+    "-- {{{ repo: 'hoge' }}}",
+    "-- {{{ name: 'fuga' }}}",
+  ];
+  const plugins = parseLua(hooksFile, "{{{,}}}");
+  const expected: Plugin[] = [
+    {
+      name: "fuga",
+      repo: "hoge",
+    },
+  ];
+  assertEquals(plugins, expected);
+});

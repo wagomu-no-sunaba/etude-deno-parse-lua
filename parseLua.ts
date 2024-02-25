@@ -5,26 +5,48 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   const endMarker = marker.split(",")[1];
   const luaComment = "--";
   const plugins: Plugin[] = [];
+  let plugin: Plugin | null = null;
   for (const line of filelines) {
-    if (
-      line.startsWith(luaComment) && line.includes(startMarker) &&
-      line.includes(endMarker)
-    ) {
-      const endMarkerPos = line.lastIndexOf(endMarker);
-      if (endMarkerPos < 0) continue;
+    if (line.startsWith(luaComment) && line.includes(startMarker)) {
+      // luaコメントは先頭にあること
+      if (line.lastIndexOf(luaComment) !== 0) continue;
+      // single line
+      if (line.includes(endMarker)) {
+        const endMarkerPos = line.lastIndexOf(endMarker);
+        if (endMarkerPos < 0) continue;
 
-      const match = line.slice(0, endMarkerPos).match(
-        new RegExp(
-          `^${luaComment}\\s*${startMarker}\\s*repo\\s*:\\s*'(?<repoName>.+)'\\s*`,
-        ),
-      );
+        const startMarkerPos = line.lastIndexOf(startMarker);
+        const match = line.slice(
+          startMarkerPos + startMarker.length,
+          endMarkerPos,
+        ).trim().match(
+          new RegExp(`^(?<hookName>[a-z_]+)\\s*:\\s*'(?<hookValue>.+)'`),
+        );
 
-      if (!match || !match.groups) continue;
-      const repo = match[1];
-
-      if (!repo) continue;
-      plugins.push({ name: repo, repo: repo });
+        if (!match || !match.groups) continue;
+        const hook = match.groups.hookName;
+        const hookValue = match.groups.hookValue;
+        if (!hookValue || !hook) continue;
+        switch (hook) {
+          case "repo":
+            if (plugin) {
+              plugins.push(plugin);
+              plugin = null;
+            }
+            plugin = { name: hookValue, repo: hookValue };
+            break;
+          case "name":
+            if (!plugin) continue;
+            plugin.name = hookValue;
+            break;
+          default:
+            plugin = { name: hookValue, repo: hook };
+        }
+      }
     }
+  }
+  if (plugin) {
+    plugins.push(plugin);
   }
   return plugins;
 }
