@@ -7,7 +7,6 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   const luaComment = "--";
   const plugins: Plugin[] = [];
   let plugin: Plugin | null = null;
-  let hookName = "";
   for (const _line of filelines) {
     const line = _line.trim();
     if (line.startsWith(luaComment) && line.includes(startMarker)) {
@@ -25,6 +24,7 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
         if (!match || !match.groups) continue;
         const hook = match.groups.hookName;
         const hookValue = eval(match.groups.hookValue);
+        const isStringArray = is.ArrayOf(is.String);
         if (!hookValue || !hook) continue;
         switch (hook) {
           case "repo":
@@ -44,7 +44,7 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
             break;
           case "on_ft":
             if (!plugin) continue;
-            if (is.String(hookValue) || is.Array(is.String(hookValue))) {
+            if (is.String(hookValue) || isStringArray(hookValue)) {
               plugin.on_ft = hookValue;
             }
             break;
@@ -59,4 +59,3 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   }
   return plugins;
 }
-
