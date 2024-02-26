@@ -1,4 +1,5 @@
 import { type Plugin } from "https://deno.land/x/dpp_vim@v0.0.7/types.ts";
+import { is } from "https://deno.land/x/unknownutil@v3.16.3/mod.ts";
 
 export function parseLua(filelines: string[], marker: string): Plugin[] {
   const startMarker = marker.split(",")[0];
@@ -38,12 +39,12 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
             break;
           case "name":
             if (!plugin) continue;
-            if (typeof hookValue !== "string") continue;
+            if (!is.String(hookValue)) continue;
             plugin.name = hookValue;
             break;
           case "on_ft":
             if (!plugin) continue;
-            if (typeof hookValue === "string" || Array.isArray(hookValue)) {
+            if (is.String(hookValue) || is.Array(is.String(hookValue))) {
               plugin.on_ft = hookValue;
             }
             break;
