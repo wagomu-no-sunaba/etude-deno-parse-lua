@@ -1,4 +1,4 @@
-import { Plugin } from "https://deno.land/x/dpp_vim@v0.0.7/types.ts";
+import { type Plugin } from "https://deno.land/x/dpp_vim@v0.0.7/types.ts";
 
 export function parseLua(filelines: string[], marker: string): Plugin[] {
   const startMarker = marker.split(",")[0];
@@ -19,17 +19,18 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
         const match = line.slice(
           startMarkerPos + startMarker.length,
           endMarkerPos,
-        ).trim().match(
-          new RegExp(`^(?<hookName>[a-z_]+)\\s*:\\s*'(?<hookValue>.+)'`),
-        );
+        ).trim().match(/^(?<hookName>[a-z_]+)\s*:\s*(?<hookValue>.+)/);
 
         if (!match || !match.groups) continue;
         const hook = match.groups.hookName;
-        const hookValue = match.groups.hookValue;
+        const hookValue = eval(match.groups.hookValue);
         if (!hookValue || !hook) continue;
         switch (hook) {
           case "repo":
             if (plugin) {
+              if (!plugin.name) {
+                plugin.name = plugin.repo ?? "";
+              }
               plugins.push(plugin);
               plugin = null;
             }
@@ -37,6 +38,7 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
             break;
           case "name":
             if (!plugin) continue;
+            if (typeof hookValue !== "string") continue;
             plugin.name = hookValue;
             break;
           default:
