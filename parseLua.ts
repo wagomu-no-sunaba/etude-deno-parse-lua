@@ -6,12 +6,12 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   const luaComment = "--";
   const plugins: Plugin[] = [];
   let plugin: Plugin | null = null;
-  for (const line of filelines) {
+  let hookName = "";
+  for (const _line of filelines) {
+    const line = _line.trim();
     if (line.startsWith(luaComment) && line.includes(startMarker)) {
-      // luaコメントは先頭にあること
-      if (line.lastIndexOf(luaComment) !== 0) continue;
       // single line
-      if (line.includes(endMarker)) {
+      if (line.includes(endMarker) && line.endsWith(endMarker)) {
         const endMarkerPos = line.lastIndexOf(endMarker);
         if (endMarkerPos < 0) continue;
 
