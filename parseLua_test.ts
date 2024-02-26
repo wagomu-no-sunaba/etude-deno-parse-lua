@@ -50,3 +50,35 @@ Deno.test("repoとnameが別", () => {
   ];
   assertEquals(plugins, expected);
 });
+
+Deno.test("on_ftが文字列のとき", () => {
+  const hooksFile: string[] = [
+    "-- {{{ repo: 'hoge' }}}",
+    "-- {{{ on_ft: 'fuga' }}}",
+  ];
+  const plugins = parseLua(hooksFile, "{{{,}}}");
+  const expected: Plugin[] = [
+    {
+      name: "hoge",
+      repo: "hoge",
+      on_ft: "fuga",
+    },
+  ];
+  assertEquals(plugins, expected);
+});
+
+Deno.test("on_ftが配列のとき", () => {
+  const hooksFile: string[] = [
+    "-- {{{ repo: 'hoge' }}}",
+    "-- {{{ on_ft: ['fuga', 'piyo'] }}}",
+  ];
+  const plugins = parseLua(hooksFile, "{{{,}}}");
+  const expected: Plugin[] = [
+    {
+      name: "hoge",
+      repo: "hoge",
+      on_ft: ["fuga", "piyo"],
+    },
+  ];
+  assertEquals(plugins, expected);
+});

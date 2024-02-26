@@ -41,6 +41,12 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
             if (typeof hookValue !== "string") continue;
             plugin.name = hookValue;
             break;
+          case "on_ft":
+            if (!plugin) continue;
+            if (typeof hookValue === "string" || Array.isArray(hookValue)) {
+              plugin.on_ft = hookValue;
+            }
+            break;
           default:
             plugin = { name: hookValue, repo: hook };
         }
