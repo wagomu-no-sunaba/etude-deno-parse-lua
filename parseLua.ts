@@ -42,7 +42,15 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
             if (!is.String(hookValue)) continue;
             plugin.name = hookValue;
             break;
+          case "on_cmd":
+          case "on_event":
           case "on_ft":
+          case "on_func":
+          case "on_if":
+          case "on_lua":
+          case "on_map":
+          case "on_path":
+          case "on_source":
             if (!plugin) continue;
             if (is.String(hookValue) || isStringArray(hookValue)) {
               plugin.on_ft = hookValue;
