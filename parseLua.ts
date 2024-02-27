@@ -9,56 +9,59 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   let plugin: Plugin | null = null;
   for (const _line of filelines) {
     const line = _line.trim();
-    if (line.startsWith(luaComment) && line.includes(startMarker)) {
-      // single line
-      if (line.includes(endMarker) && line.endsWith(endMarker)) {
-        const endMarkerPos = line.lastIndexOf(endMarker);
-        if (endMarkerPos < 0) continue;
+    // empty line
+    if (line === "") continue;
+    // single line
+    if (
+      line.startsWith(luaComment) && line.includes(startMarker) &&
+      line.endsWith(endMarker)
+    ) {
+      const endMarkerPos = line.lastIndexOf(endMarker);
+      const startMarkerPos = line.lastIndexOf(startMarker);
 
-        const startMarkerPos = line.lastIndexOf(startMarker);
-        const match = line.slice(
-          startMarkerPos + startMarker.length,
-          endMarkerPos,
-        ).trim().match(/^(?<hookName>[a-z_]+)\s*:\s*(?<hookValue>.+)/);
+      const match = line.slice(
+        startMarkerPos + startMarker.length,
+        endMarkerPos,
+      ).trim().match(/^(?<hookName>[a-z_]+)\s*:\s*(?<hookValue>.+)/);
 
-        if (!match || !match.groups) continue;
-        const hook = match.groups.hookName;
-        const hookValue = eval(match.groups.hookValue);
-        const isStringArray = is.ArrayOf(is.String);
-        if (!hookValue || !hook) continue;
-        switch (hook) {
-          case "repo":
-            if (plugin) {
-              if (!plugin.name) {
-                plugin.name = plugin.repo ?? "";
-              }
-              plugins.push(plugin);
-              plugin = null;
+      if (!match || !match.groups) continue;
+      const hook = match.groups.hookName;
+      const hookValue = eval(match.groups.hookValue);
+      const isStringArray = is.ArrayOf(is.String);
+      if (!hookValue || !hook) continue;
+      switch (hook) {
+        case "repo":
+          if (plugin) {
+            if (!plugin.name) {
+              plugin.name = plugin.repo ?? "";
             }
-            plugin = { name: hookValue, repo: hookValue };
-            break;
-          case "name":
-            if (!plugin) continue;
-            if (!is.String(hookValue)) continue;
-            plugin.name = hookValue;
-            break;
-          case "on_cmd":
-          case "on_event":
-          case "on_ft":
-          case "on_func":
-          case "on_if":
-          case "on_lua":
-          case "on_map":
-          case "on_path":
-          case "on_source":
-            if (!plugin) continue;
-            if (is.String(hookValue) || isStringArray(hookValue)) {
-              plugin.on_ft = hookValue;
-            }
-            break;
-          default:
-            plugin = { name: hookValue, repo: hook };
-        }
+            plugins.push(plugin);
+            plugin = null;
+          }
+          plugin = { name: hookValue, repo: hookValue };
+          break;
+        case "name":
+        case "rtp":
+          if (!plugin) continue;
+          if (!is.String(hookValue)) continue;
+          plugin[hook] = hookValue;
+          break;
+        case "on_cmd":
+        case "on_event":
+        case "on_ft":
+        case "on_func":
+        case "on_if":
+        case "on_lua":
+        case "on_map":
+        case "on_path":
+        case "on_source":
+          if (!plugin) continue;
+          if (is.String(hookValue) || isStringArray(hookValue)) {
+            plugin.on_ft = hookValue;
+          }
+          break;
+        default:
+          plugin = { name: hookValue, repo: hook };
       }
     }
   }
