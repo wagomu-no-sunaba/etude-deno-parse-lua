@@ -82,3 +82,23 @@ Deno.test("on_ftが配列のとき", () => {
   ];
   assertEquals(plugins, expected);
 });
+
+Deno.test("複数行のフック", () => {
+  const hooksFile: string[] = [
+    "-- {{{ repo: 'hoge' }}}",
+    "-- lua_source {{{",
+    "foo",
+    "bar",
+    "baz",
+    "-- }}}",
+  ];
+  const plugins = parseLua(hooksFile, "{{{,}}}");
+  const expected: Plugin[] = [
+    {
+      name: "hoge",
+      repo: "hoge",
+      lua_source: "foo\nbar\nbaz",
+    },
+  ];
+  assertEquals(plugins, expected);
+});

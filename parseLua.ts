@@ -7,10 +7,37 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   const luaComment = "--";
   const plugins: Plugin[] = [];
   let plugin: Plugin | null = null;
+  let luaHook: string | null = null;
+  let luaHookValue: string | null = null;
   for (const _line of filelines) {
     const line = _line.trim();
     // empty line
     if (line === "") continue;
+    if (
+      luaHook && luaHookValue && line.startsWith(luaComment) &&
+      !line.includes(startMarker) && line.endsWith(endMarker)
+    ) {
+      if (!plugin) continue;
+      switch (luaHook) {
+        case "lua_add":
+        case "lua_depends_update":
+        case "lua_done_update":
+        case "lua_post_source":
+        case "lua_post_update":
+        case "lua_source":
+          plugin[luaHook] = luaHookValue;
+          continue;
+        default:
+          continue;
+      }
+    }
+    if (luaHook) {
+      if (luaHookValue) {
+        luaHookValue += "\n" + line;
+      } else {
+        luaHookValue = line;
+      }
+    }
     // single line
     if (
       line.startsWith(luaComment) && line.includes(startMarker) &&
@@ -62,6 +89,29 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
           break;
         default:
           plugin = { name: hookValue, repo: hook };
+      }
+    }
+    if (
+      line.startsWith(luaComment) && line.endsWith(startMarker) &&
+      !line.includes(endMarker)
+    ) {
+      const luaCommentPos = line.lastIndexOf(luaComment);
+      const startMarkerPos = line.lastIndexOf(startMarker);
+      const hook = line.slice(
+        luaCommentPos + luaComment.length,
+        startMarkerPos,
+      ).trim();
+      switch (hook) {
+        case "lua_add":
+        case "lua_depends_update":
+        case "lua_done_update":
+        case "lua_post_source":
+        case "lua_post_update":
+        case "lua_source":
+          luaHook = hook;
+          break;
+        default:
+          break;
       }
     }
   }
