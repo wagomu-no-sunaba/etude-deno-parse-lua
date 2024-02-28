@@ -5,114 +5,138 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   const startMarker = marker.split(",")[0];
   const endMarker = marker.split(",")[1];
   const luaComment = "--";
+
   const plugins: Plugin[] = [];
   let plugin: Plugin | null = null;
   let luaHook: string | null = null;
   let luaHookValue: string | null = null;
+  let ftPlugin: Record<string, string> | null = null;
+  const stringArray = is.ArrayOf(is.String);
+
   for (const _line of filelines) {
     const line = _line.trim();
     // empty line
     if (line === "") continue;
-    if (
-      luaHook && luaHookValue && line.startsWith(luaComment) &&
-      !line.includes(startMarker) && line.endsWith(endMarker)
-    ) {
-      if (!plugin) continue;
-      switch (luaHook) {
-        case "lua_add":
-        case "lua_depends_update":
-        case "lua_done_update":
-        case "lua_post_source":
-        case "lua_post_update":
-        case "lua_source":
-          plugin[luaHook] = luaHookValue;
-          continue;
-        default:
-          continue;
-      }
-    }
-    if (luaHook) {
-      if (luaHookValue) {
-        luaHookValue += "\n" + line;
-      } else {
-        luaHookValue = line;
-      }
-    }
-    // single line
+
+    // single line hook
+    // e.g.
+    // -- {{{ repo: "foo/bar" }}}
     if (
       line.startsWith(luaComment) && line.includes(startMarker) &&
       line.endsWith(endMarker)
     ) {
-      const endMarkerPos = line.lastIndexOf(endMarker);
       const startMarkerPos = line.lastIndexOf(startMarker);
-
-      const match = line.slice(
+      const endMarkerPos = line.lastIndexOf(endMarker);
+      const hook = line.slice(
         startMarkerPos + startMarker.length,
         endMarkerPos,
       ).trim().match(/^(?<hookName>[a-z_]+)\s*:\s*(?<hookValue>.+)/);
 
-      if (!match || !match.groups) continue;
-      const hook = match.groups.hookName;
-      const hookValue = eval(match.groups.hookValue);
-      const isStringArray = is.ArrayOf(is.String);
-      if (!hookValue || !hook) continue;
-      switch (hook) {
-        case "repo":
-          if (plugin) {
-            if (!plugin.name) {
-              plugin.name = plugin.repo ?? "";
-            }
-            plugins.push(plugin);
-            plugin = null;
-          }
-          plugin = { name: hookValue, repo: hookValue };
-          break;
-        case "name":
-        case "rtp":
-          if (!plugin) continue;
-          if (!is.String(hookValue)) continue;
-          plugin[hook] = hookValue;
-          break;
-        case "on_cmd":
-        case "on_event":
-        case "on_ft":
-        case "on_func":
-        case "on_if":
-        case "on_lua":
-        case "on_map":
-        case "on_path":
-        case "on_source":
-          if (!plugin) continue;
-          if (is.String(hookValue) || isStringArray(hookValue)) {
-            plugin.on_ft = hookValue;
-          }
-          break;
-        default:
-          plugin = { name: hookValue, repo: hook };
+      if (!hook || !hook.groups) continue;
+      const hookName = hook.groups.hookName;
+      const hookValue = eval(hook.groups.hookValue);
+      if (!(is.String(hookValue) || stringArray(hookValue))) continue;
+
+      if (hookName === "repo") {
+        if (plugin) {
+          if (ftPlugin) plugin.ftplugin = ftPlugin;
+
+          plugins.push(plugin);
+          plugin = null;
+          luaHook = null;
+          luaHookValue = null;
+          ftPlugin = null;
+        }
+
+        if (!is.String(hookValue)) continue;
+
+        plugin = {
+          repo: hookValue,
+          name: hookValue,
+        };
+        continue;
       }
+      if (hookName === "name") {
+        if (!plugin) continue;
+        if (!is.String(hookValue)) continue;
+
+        plugin.name = hookValue;
+        continue;
+      }
+
+      if (!plugin) continue;
+
+      if (
+        hookName === "on_cmd" ||
+        hookName === "on_event" ||
+        hookName === "on_ft" ||
+        hookName === "on_func" ||
+        hookName === "on_if" ||
+        hookName === "on_lua" ||
+        hookName === "on_map" ||
+        hookName === "on_path" ||
+        hookName === "on_source"
+      ) {
+        if (!(stringArray(hookValue) || is.String(hookValue))) continue;
+        plugin[hookName] = hookValue;
+        continue;
+      }
+      continue;
     }
+
+    // multiline hook
+    // e.g.
+    // -- lua_source {{{
+    // ...
+    // ...
+    // -- }}}
+
+    // start multiline hook
     if (
       line.startsWith(luaComment) && line.endsWith(startMarker) &&
       !line.includes(endMarker)
     ) {
-      const luaCommentPos = line.lastIndexOf(luaComment);
       const startMarkerPos = line.lastIndexOf(startMarker);
-      const hook = line.slice(
-        luaCommentPos + luaComment.length,
-        startMarkerPos,
-      ).trim();
-      switch (hook) {
-        case "lua_add":
-        case "lua_depends_update":
-        case "lua_done_update":
-        case "lua_post_source":
-        case "lua_post_update":
-        case "lua_source":
-          luaHook = hook;
-          break;
-        default:
-          break;
+      luaHook = line.slice(luaComment.length, startMarkerPos).trim();
+      continue;
+    }
+
+    // end multiline hook
+    if (
+      line.startsWith(luaComment) && !line.includes(startMarker) &&
+      line.endsWith(endMarker)
+    ) {
+      if (!plugin) continue;
+      if (!(is.String(luaHook) && is.String(luaHookValue))) continue;
+      if (!luaHook && !luaHookValue) continue;
+
+      if (
+        luaHook === "lua_add" ||
+        luaHook === "lua_depends_update" ||
+        luaHook === "lua_done_update" ||
+        luaHook === "lua_post_source" ||
+        luaHook === "lua_post_update" ||
+        luaHook === "lua_source"
+      ) {
+        plugin[luaHook] = luaHookValue;
+      } else {
+        if (!ftPlugin) ftPlugin = {};
+        ftPlugin = {
+          ...ftPlugin,
+          luaHook: luaHookValue,
+        };
       }
+      continue;
+    }
+    //console.log(luaHook, luaHookValue, line);
+
+    if (luaHook) {
+      if (!luaHookValue) {
+        luaHookValue = line;
+      } else {
+        luaHookValue += "\n" + line;
+      }
+      continue;
     }
   }
   if (plugin) {
