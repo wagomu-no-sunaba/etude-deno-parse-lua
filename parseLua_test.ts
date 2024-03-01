@@ -2,10 +2,18 @@ import { assertEquals } from "https://deno.land/std@0.217.0/assert/mod.ts";
 import { parseLua } from "./parseLua.ts";
 import { type Plugin } from "https://deno.land/x/dpp_vim@v0.0.7/types.ts";
 
+type Lua = {
+  plugins?: Plugin[];
+  ftplugins?: Record<string, string>;
+};
+
 Deno.test("空のとき", () => {
   const hooksFile: string[] = [];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  assertEquals(plugins, []);
+  assertEquals(plugins, {
+    plugins: [],
+    ftplugins: {},
+  });
 });
 
 Deno.test("関係ないコメントかコメント行のとき", () => {
@@ -14,7 +22,10 @@ Deno.test("関係ないコメントかコメント行のとき", () => {
     "fuga = 1",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  assertEquals(plugins, []);
+  assertEquals(plugins, {
+    plugins: [],
+    ftplugins: {},
+  });
 });
 
 Deno.test("複数のレポジトリを設定", () => {
@@ -23,16 +34,19 @@ Deno.test("複数のレポジトリを設定", () => {
     "-- {{{ repo: 'fuga' }}}",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  const expected: Plugin[] = [
-    {
-      name: "hoge",
-      repo: "hoge",
-    },
-    {
-      name: "fuga",
-      repo: "fuga",
-    },
-  ];
+  const expected: Lua = {
+    plugins: [
+      {
+        name: "hoge",
+        repo: "hoge",
+      },
+      {
+        name: "fuga",
+        repo: "fuga",
+      },
+    ],
+    ftplugins: {},
+  };
   assertEquals(plugins, expected);
 });
 
@@ -42,12 +56,15 @@ Deno.test("repoとnameが別", () => {
     "-- {{{ name: 'fuga' }}}",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  const expected: Plugin[] = [
-    {
-      name: "fuga",
-      repo: "hoge",
-    },
-  ];
+  const expected: Lua = {
+    plugins: [
+      {
+        name: "fuga",
+        repo: "hoge",
+      },
+    ],
+    ftplugins: {},
+  };
   assertEquals(plugins, expected);
 });
 
@@ -57,13 +74,16 @@ Deno.test("on_ftが文字列のとき", () => {
     "-- {{{ on_ft: 'fuga' }}}",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  const expected: Plugin[] = [
-    {
-      name: "hoge",
-      repo: "hoge",
-      on_ft: "fuga",
-    },
-  ];
+  const expected: Lua = {
+    plugins: [
+      {
+        name: "hoge",
+        repo: "hoge",
+        on_ft: "fuga",
+      },
+    ],
+    ftplugins: {},
+  };
   assertEquals(plugins, expected);
 });
 
@@ -73,13 +93,16 @@ Deno.test("on_ftが配列のとき", () => {
     "-- {{{ on_ft: ['fuga', 'piyo'] }}}",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  const expected: Plugin[] = [
-    {
-      name: "hoge",
-      repo: "hoge",
-      on_ft: ["fuga", "piyo"],
-    },
-  ];
+  const expected: Lua = {
+    plugins: [
+      {
+        name: "hoge",
+        repo: "hoge",
+        on_ft: ["fuga", "piyo"],
+      },
+    ],
+    ftplugins: {},
+  };
   assertEquals(plugins, expected);
 });
 
@@ -93,12 +116,16 @@ Deno.test("複数行のフック", () => {
     "-- }}}",
   ];
   const plugins = parseLua(hooksFile, "{{{,}}}");
-  const expected: Plugin[] = [
-    {
-      name: "hoge",
-      repo: "hoge",
-      lua_source: "foo\nbar\nbaz",
-    },
-  ];
+  const expected: Lua = {
+    plugins: [
+      {
+        name: "hoge",
+        repo: "hoge",
+        lua_source: "foo\nbar\nbaz",
+      },
+    ],
+    ftplugins: {},
+  };
   assertEquals(plugins, expected);
 });
+

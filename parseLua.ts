@@ -1,7 +1,11 @@
 import { type Plugin } from "https://deno.land/x/dpp_vim@v0.0.7/types.ts";
 import { is } from "https://deno.land/x/unknownutil@v3.16.3/mod.ts";
+import { basename } from "https://deno.land/std@0.206.0/path/mod.ts";
 
-export function parseLua(filelines: string[], marker: string): Plugin[] {
+export function parseLua(filelines: string[], marker: string): {
+  plugins?: Plugin[];
+  ftplugins?: Record<string, string>;
+} {
   const startMarker = marker.split(",")[0];
   const endMarker = marker.split(",")[1];
   const luaComment = "--";
@@ -39,28 +43,28 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
 
       if (hookName === "repo") {
         if (plugin) {
-          if (ftPlugin) plugin.ftplugin = ftPlugin;
+          // if (ftPlugin) plugin.ftplugin = ftPlugin;
 
           plugins.push(plugin);
           plugin = null;
           luaHook = null;
           luaHookValue = null;
-          ftPlugin = null;
+          // ftPlugin = null;
         }
 
         if (!is.String(hookValue)) continue;
 
         plugin = {
           repo: hookValue,
-          name: hookValue,
+          name: basename(hookValue ?? ""),
         };
         continue;
       }
-      if (hookName === "name") {
+      if (hookName === "name" || hookName === "rtp") {
         if (!plugin) continue;
         if (!is.String(hookValue)) continue;
 
-        plugin.name = hookValue;
+        plugin[hookName] = hookValue;
         continue;
       }
 
@@ -128,8 +132,6 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
       }
       continue;
     }
-    //console.log(luaHook, luaHookValue, line);
-
     if (luaHook) {
       if (!luaHookValue) {
         luaHookValue = line;
@@ -142,5 +144,9 @@ export function parseLua(filelines: string[], marker: string): Plugin[] {
   if (plugin) {
     plugins.push(plugin);
   }
-  return plugins;
+  return {
+    plugins: plugins,
+    ftplugins: ftPlugin ?? {},
+  };
 }
+
